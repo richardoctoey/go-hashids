@@ -142,6 +142,15 @@ func NewWithData(data *HashIDData) (*HashID, error) {
 	return hid, nil
 }
 
+func (h *HashID) EncodeUint64(numbers []uint64) (string, error) {
+	numbers64 := make([]uint64, 0, len(numbers))
+	for _, id := range numbers {
+		numbers64 = append(numbers64, uint64(id))
+	}
+	return h.Encodeuint64(numbers64)
+}
+
+
 // Encode hashes an array of int to a string containing at least MinLength characters taken from the Alphabet.
 // Use Decode using the same Alphabet and Salt to get back the array of int.
 func (h *HashID) Encode(numbers []int) (string, error) {

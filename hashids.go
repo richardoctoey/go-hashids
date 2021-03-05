@@ -229,6 +229,24 @@ func (h *HashID) EncodeInt64(numbers []int64) (string, error) {
 	return string(result), nil
 }
 
+func hashUint64(input uint64, alphabet []rune, result []rune) []rune {
+	result = result[:0]
+	for {
+		r := alphabet[input%uint64(len(alphabet))]
+		result = append(result, r)
+		input /= uint64(len(alphabet))
+		if input == 0 {
+			break
+		}
+	}
+	for i := len(result)/2 - 1; i >= 0; i-- {
+		opp := len(result) - 1 - i
+		result[i], result[opp] = result[opp], result[i]
+	}
+	return result
+}
+
+
 // Encodeuint64 hashes an array of uint64 to a string containing at least MinLength characters taken from the Alphabet.
 // Use Decodeuint64 using the same Alphabet and Salt to get back the array of uint64.
 func (h *HashID) Encodeuint64(numbers []uint64) (string, error) {
@@ -265,7 +283,7 @@ func (h *HashID) Encodeuint64(numbers []uint64) (string, error) {
 		buffer = append(buffer, h.salt...)
 		buffer = append(buffer, alphabet...)
 		consistentShuffleInPlace(alphabet, buffer[:len(alphabet)])
-		hashBuf = hash(n, alphabet, hashBuf)
+		hashBuf = hashUint64(n, alphabet, hashBuf)
 		result = append(result, hashBuf...)
 
 		if i+1 < len(numbers) {

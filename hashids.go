@@ -229,6 +229,75 @@ func (h *HashID) EncodeInt64(numbers []int64) (string, error) {
 	return string(result), nil
 }
 
+// Encodeuint64 hashes an array of uint64 to a string containing at least MinLength characters taken from the Alphabet.
+// Use Decodeuint64 using the same Alphabet and Salt to get back the array of uint64.
+func (h *HashID) Encodeuint64(numbers []uint64) (string, error) {
+	if len(numbers) == 0 {
+		return "", errors.New("encoding empty array of numbers makes no sense")
+	}
+	for _, n := range numbers {
+		if n < 0 {
+			return "", errors.New("negative number not supported")
+		}
+	}
+
+	alphabet := duplicateRuneSlice(h.alphabet)
+
+	numbersHash := uint64(0)
+	for i, n := range numbers {
+		numbersHash += (n % uint64(i+100))
+	}
+
+	maxRuneLength := h.maxLengthPerNumber * len(numbers)
+	if maxRuneLength < h.minLength {
+		maxRuneLength = h.minLength
+	}
+
+	result := make([]rune, 0, maxRuneLength)
+	lottery := alphabet[numbersHash%uint64(len(alphabet))]
+	result = append(result, lottery)
+	hashBuf := make([]rune, maxRuneLength)
+	buffer := make([]rune, len(alphabet)+len(h.salt)+1)
+
+	for i, n := range numbers {
+		buffer = buffer[:1]
+		buffer[0] = lottery
+		buffer = append(buffer, h.salt...)
+		buffer = append(buffer, alphabet...)
+		consistentShuffleInPlace(alphabet, buffer[:len(alphabet)])
+		hashBuf = hash(n, alphabet, hashBuf)
+		result = append(result, hashBuf...)
+
+		if i+1 < len(numbers) {
+			n %= uint64(hashBuf[0]) + uint64(i)
+			result = append(result, h.seps[n%uint64(len(h.seps))])
+		}
+	}
+
+	if len(result) < h.minLength {
+		guardIndex := (numbersHash + uint64(result[0])) % uint64(len(h.guards))
+		result = append([]rune{h.guards[guardIndex]}, result...)
+
+		if len(result) < h.minLength {
+			guardIndex = (numbersHash + uint64(result[2])) % uint64(len(h.guards))
+			result = append(result, h.guards[guardIndex])
+		}
+	}
+
+	halfLength := len(alphabet) / 2
+	for len(result) < h.minLength {
+		consistentShuffleInPlace(alphabet, duplicateRuneSlice(alphabet))
+		result = append(alphabet[halfLength:], append(result, alphabet[:halfLength]...)...)
+		excess := len(result) - h.minLength
+		if excess > 0 {
+			result = result[excess/2 : excess/2+h.minLength]
+		}
+	}
+
+	return string(result), nil
+}
+
+
 // EncodeHex hashes a hexadecimal string to a string containing at least MinLength characters taken from the Alphabet.
 // A hexadecimal string should not contain the 0x prefix.
 // Use DecodeHex using the same Alphabet and Salt to get back the hexadecimal string.

@@ -1,3 +1,3 @@
-module github.com/speps/go-hashids
+module github.com/richardoctoey/go-hashids
 
 go 1.14
